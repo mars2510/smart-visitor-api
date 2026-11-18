@@ -65,3 +65,4 @@ wcwidth==0.9.4
 websockets==17.4
 python-jose[cryptography]
 sqlalchemy[asyncio]
+psycopg[binary]
