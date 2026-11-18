@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Admin Panel</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #f4f6f9;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .login-card {
+        width: 100%;
+        max-width: 400px;
+        padding: 2rem;
+        border-radius: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card shadow-lg border-0 login-card">
+      <div class="text-center mb-4">
+        <i
+          class="bi bi-shield-lock-fill text-primary"
+          style="font-size: 3rem"
+        ></i>
+        <h4 class="fw-bold mt-2">VMS Admin</h4>
+        <p class="text-muted small">Silakan login untuk melanjutkan</p>
+      </div>
+
+      <div id="errorAlert" class="alert alert-danger d-none small py-2"></div>
+
+      <form id="loginForm">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Username atau Email</label>
+          <input type="text" id="username" class="form-control" required />
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Password</label>
+          <input type="password" id="password" class="form-control" required />
+        </div>
+        <button
+          type="submit"
+          class="btn btn-primary w-100 fw-semibold"
+          id="btnLogin"
+        >
+          Login
+        </button>
+      </form>
+    </div>
+
+    <script>
+      document.getElementById("loginForm").onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById("btnLogin");
+        const alertBox = document.getElementById("errorAlert");
+
+        btn.disabled = true;
+        btn.innerText = "Memproses...";
+        alertBox.classList.add("d-none");
+
+        // Format data untuk OAuth2 (x-www-form-urlencoded)
+        const formData = new URLSearchParams();
+        formData.append("username", document.getElementById("username").value);
+        formData.append("password", document.getElementById("password").value);
+
+        try {
+          // Panggil endpoint login FastAPI
+          const res = await fetch("/api/v1/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData,
+          });
+
+          if (!res.ok) {
+            throw new Error("Username atau password salah");
+          }
+
+          const data = await res.json();
+
+          // Simpan Token di Cookie (berlaku 1 hari)
+          document.cookie = `access_token=${data.access_token}; path=/; max-age=86400; SameSite=Strict`;
+
+          // Redirect ke Dashboard
+          window.location.href = "/admin";
+        } catch (error) {
+          alertBox.innerText = error.message;
+          alertBox.classList.remove("d-none");
+        } finally {
+          btn.disabled = false;
+          btn.innerText = "Login";
+        }
+      };
+    </script>
+  </body>
+</html>

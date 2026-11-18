@@ -1,0 +1,264 @@
+{% extends "admin_base.html" %} {% block content %}
+<div class="card border-0 shadow-sm">
+  <div
+    class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2"
+  >
+    <h5 class="mb-0 fw-semibold">
+      <i class="bi bi-clock-history text-primary"></i> Log Aktivitas Scan
+    </h5>
+
+    <!-- Filter & Pencarian -->
+    <div class="d-flex gap-2 flex-wrap">
+      <select
+        id="filterAksi"
+        class="form-select form-select-sm"
+        style="width: auto"
+        onchange="fetchLogs(1)"
+      >
+        <option value="">Semua Aksi</option>
+        <option value="GERBANG_IN_TERIMA">Gerbang In (Terima)</option>
+        <option value="GERBANG_IN_TOLAK">Gerbang In (Tolak)</option>
+        <option value="SCAN_BARCODE">Scan Barcode</option>
+        <option value="LOKASI_IN">Masuk Lokasi</option>
+        <option value="LOKASI_OUT">Keluar Lokasi</option>
+        <option value="GERBANG_OUT">Gerbang Out</option>
+        <option value="SELESAI_MANUAL_POS1">Selesai Manual Pos 1</option>
+        <option value="EXPIRED_HILANG">Kunjungan kedaluwarsa (Hilang)</option>
+        <option value="EXPIRED_SELESAI">Kunjungan kedaluwarsa (Selesai)</option>
+      </select>
+
+      <select
+        id="filterStatus"
+        class="form-select form-select-sm"
+        style="width: auto"
+        onchange="fetchLogs(1)"
+      >
+        <option value="">Semua Status</option>
+        <option value="SUKSES">Sukses</option>
+        <option value="GAGAL">Gagal</option>
+      </select>
+
+      <div class="input-group input-group-sm" style="width: 250px">
+        <input
+          type="text"
+          id="searchInput"
+          class="form-control"
+          placeholder="Cari Nama / Barcode / Security..."
+        />
+        <button class="btn btn-primary" onclick="fetchLogs(1)">
+          <i class="bi bi-search"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Waktu Scan</th>
+            <th>Pengunjung</th>
+            <th>Lokasi</th>
+            <th>Aksi Terakhir</th>
+            <th>Status</th>
+            <th>Keterangan Terakhir</th>
+            <th>Riwayat</th>
+          </tr>
+        </thead>
+        <tbody id="log-table-body">
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">
+              Memuat data...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Footer Pagination -->
+  <div
+    class="card-footer bg-white d-flex justify-content-between align-items-center py-3"
+  >
+    <span class="text-muted small" id="pagination-info"
+      >Menampilkan 0 dari 0 pengunjung</span
+    >
+    <nav aria-label="Page navigation">
+      <ul class="pagination pagination-sm mb-0" id="pagination-controls">
+        <!-- Tombol halaman di-generate oleh JS -->
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<script>
+  async function fetchLogs(page = 1) {
+    const search = document.getElementById("searchInput").value.trim();
+    const aksi = document.getElementById("filterAksi").value;
+    const status = document.getElementById("filterStatus").value;
+    const tbody = document.getElementById("log-table-body");
+
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="text-center py-4 text-muted">Memuat data...</td></tr>';
+
+    try {
+      const url = `/api/v1/admin/logs?page=${page}&limit=20&search=${encodeURIComponent(search)}&aksi=${aksi}&status=${status}`;
+      const response = await fetch(url);
+      const result = await response.json();
+
+      const data = result.data;
+      const meta = result.meta;
+
+      tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        tbody.innerHTML =
+          '<tr><td colspan="7" class="text-center py-4 text-muted">Tidak ada log aktivitas.</td></tr>';
+        document.getElementById("pagination-info").innerText =
+          "Menampilkan 0 dari 0 pengunjung";
+        document.getElementById("pagination-controls").innerHTML = "";
+        return;
+      }
+
+      const visitors = new Map();
+      data.forEach((item) => {
+        const key = item.kode_qr || item.nama_pengunjung;
+        if (!visitors.has(key)) visitors.set(key, []);
+        visitors.get(key).push(item);
+      });
+
+      let groupIndex = 0;
+      visitors.forEach((activities, barcode) => {
+        const visitor = activities[0];
+        const collapseId = `activity-group-${page}-${groupIndex++}`;
+        const latestBadge =
+          visitor.status_hasil === "SUKSES" ? "bg-success" : "bg-danger";
+        const activityRows = activities
+          .slice(1)
+          .map((item) => {
+            const badgeClass =
+              item.status_hasil === "SUKSES" ? "bg-success" : "bg-danger";
+            return `
+              <tr class="activity-history-row d-none" data-history-group="${collapseId}">
+                <td class="ps-3 text-muted small text-nowrap">${escapeHtml(item.waktu_scan)}</td>
+                <td></td>
+                <td>${escapeHtml(item.lokasi_pos)}</td>
+                <td><span class="badge bg-secondary">${escapeHtml(item.jenis_aksi)}</span></td>
+                <td><span class="badge ${badgeClass}">${escapeHtml(item.status_hasil)}</span></td>
+                <td class="text-muted small">${escapeHtml(item.keterangan)}</td>
+                <td></td>
+              </tr>`;
+          })
+          .join("");
+
+        tbody.insertAdjacentHTML(
+          "beforeend",
+          `<tr class="activity-current-row">
+            <td class="ps-3 text-muted small text-nowrap">
+              ${activities.length > 1 ? `<button class="btn btn-sm btn-link p-0 me-2 align-baseline activity-toggle" type="button"
+                data-history-group="${collapseId}"
+                aria-expanded="false" aria-label="Toggle aktivitas">
+                <i class="bi bi-chevron-down"></i>
+              </button>` : '<span class="d-inline-block me-3"></span>'}
+              ${escapeHtml(visitor.waktu_scan)}
+            </td>
+            <td>
+              <div class="fw-semibold">${escapeHtml(visitor.nama_pengunjung)}</div>
+              <div class="small text-muted font-monospace">${escapeHtml(barcode)}</div>
+            </td>
+            <td>${escapeHtml(visitor.lokasi_pos)}</td>
+            <td><span class="badge bg-secondary">${escapeHtml(visitor.jenis_aksi)}</span></td>
+            <td><span class="badge ${latestBadge}">${escapeHtml(visitor.status_hasil)}</span></td>
+            <td class="text-muted small">${escapeHtml(visitor.keterangan)}</td>
+            <td>${activities.length > 1 ? `<span class="text-muted small">${activities.length - 1} aktivitas</span>` : '<span class="text-muted small">-</span>'}</td>
+          </tr>
+          ${activityRows}`,
+        );
+      });
+
+      // Update Info Pagination
+      const startData = (meta.page - 1) * meta.limit + 1;
+      const endData = Math.min(meta.page * meta.limit, meta.total_data);
+      document.getElementById("pagination-info").innerText =
+        `Menampilkan ${startData} - ${endData} dari ${meta.total_data} pengunjung`;
+
+      renderPagination(meta.total_pages, meta.page);
+    } catch (error) {
+      console.error("Gagal mengambil log:", error);
+      tbody.innerHTML =
+        '<tr><td colspan="7" class="text-center py-4 text-danger">Terjadi kesalahan saat memuat data.</td></tr>';
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (character) => {
+      const entities = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      };
+      return entities[character];
+    });
+  }
+
+  document.getElementById("log-table-body").addEventListener("click", (event) => {
+    const button = event.target.closest(".activity-toggle");
+    if (!button) return;
+
+    const group = button.dataset.historyGroup;
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", String(!expanded));
+    button.innerHTML = `<i class="bi bi-chevron-${expanded ? "down" : "up"}"></i>`;
+    button.closest("tr").classList.toggle("activity-current-row-expanded", !expanded);
+    document
+      .querySelectorAll(`[data-history-group="${group}"].activity-history-row`)
+      .forEach((row) => row.classList.toggle("d-none", expanded));
+  });
+
+  function renderPagination(totalPages, currentPage) {
+    const container = document.getElementById("pagination-controls");
+    container.innerHTML = "";
+
+    if (totalPages <= 1) return;
+
+    container.innerHTML += `
+            <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+                <a class="page-link" href="#" onclick="fetchLogs(${currentPage - 1}); return false;">&laquo;</a>
+            </li>
+        `;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= currentPage - 1 && i <= currentPage + 1)
+      ) {
+        container.innerHTML += `
+                    <li class="page-item ${i === currentPage ? "active" : ""}">
+                        <a class="page-link" href="#" onclick="fetchLogs(${i}); return false;">${i}</a>
+                    </li>
+                `;
+      } else if (i === currentPage - 2 || i === currentPage + 2) {
+        container.innerHTML += `<li class="page-item disabled"><a class="page-link" href="#">...</a></li>`;
+      }
+    }
+
+    container.innerHTML += `
+            <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+                <a class="page-link" href="#" onclick="fetchLogs(${currentPage + 1}); return false;">&raquo;</a>
+            </li>
+        `;
+  }
+
+  document
+    .getElementById("searchInput")
+    .addEventListener("keypress", function (e) {
+      if (e.key === "Enter") fetchLogs(1);
+    });
+
+  document.addEventListener("DOMContentLoaded", () => fetchLogs(1));
+</script>
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "admin_base.html" %} {% block content %}
+<div class="card border-0 shadow-sm">
+  <div
+    class="card-header bg-white py-3 d-flex justify-content-between align-items-center"
+  >
+    <h5 class="mb-0 fw-semibold">
+      <i class="bi bi-geo-alt text-primary"></i> Manajemen POS / Lokasi
+    </h5>
+    <button class="btn btn-primary btn-sm" onclick="openModal()">
+      <i class="bi bi-plus-lg"></i> Tambah POS
+    </button>
+  </div>
+
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4" style="width: 80px">ID</th>
+            <th>Nama POS / Lokasi</th>
+            <th class="text-end pe-4" style="width: 200px">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="pos-table-body">
+          <tr>
+            <td colspan="3" class="text-center py-4 text-muted">
+              Memuat data...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tambah/Edit POS -->
+<div class="modal fade" id="posModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Tambah POS</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <form id="posForm">
+        <div class="modal-body">
+          <input type="hidden" id="posId" value="" />
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nama POS / Lokasi</label>
+            <input
+              type="text"
+              id="posName"
+              class="form-control"
+              placeholder="Contoh: Gedung A - HRD"
+              required
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Batal
+          </button>
+          <button type="submit" class="btn btn-primary" id="btnSave">
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Inisialisasi Bootstrap Modal
+  let posModal;
+  document.addEventListener("DOMContentLoaded", () => {
+    posModal = new bootstrap.Modal(document.getElementById("posModal"));
+    fetchPos();
+  });
+
+  // 1. Ambil Data POS
+  async function fetchPos() {
+    const tbody = document.getElementById("pos-table-body");
+    try {
+      const res = await fetch("/api/v1/api/pos/all");
+      const data = await res.json();
+
+      tbody.innerHTML = "";
+      if (data.length === 0) {
+        tbody.innerHTML =
+          '<tr><td colspan="3" class="text-center py-4 text-muted">Belum ada data POS.</td></tr>';
+        return;
+      }
+
+      data.forEach((item) => {
+        tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-4 text-muted">#${item.id_pos}</td>
+                        <td class="fw-semibold">${item.nama_pos}</td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-warning me-1" onclick="editPos(${item.id_pos}, '${item.nama_pos}')">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deletePos(${item.id_pos})">
+                                <i class="bi bi-trash"></i> Hapus
+                            </button>
+                        </td>
+                    </tr>
+                `;
+      });
+    } catch (error) {
+      console.error("Gagal load POS:", error);
+      tbody.innerHTML =
+        '<tr><td colspan="3" class="text-center py-4 text-danger">Gagal memuat data.</td></tr>';
+    }
+  }
+
+  // 2. Buka Modal untuk Tambah
+  function openModal() {
+    document.getElementById("modalTitle").innerText = "Tambah POS";
+    document.getElementById("posForm").reset();
+    document.getElementById("posId").value = "";
+    posModal.show();
+  }
+
+  // 3. Buka Modal untuk Edit
+  function editPos(id, nama) {
+    document.getElementById("modalTitle").innerText = "Edit POS";
+    document.getElementById("posId").value = id;
+    document.getElementById("posName").value = nama;
+    posModal.show();
+  }
+
+  // 4. Submit Form (Tambah / Edit)
+  document.getElementById("posForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById("posId").value;
+    const nama = document.getElementById("posName").value.trim();
+    const btn = document.getElementById("btnSave");
+
+    if (!nama) return alert("Nama POS wajib diisi!");
+
+    btn.disabled = true;
+    btn.innerText = "Menyimpan...";
+
+    try {
+      const isEdit = id !== "";
+      const url = isEdit
+        ? `/api/v1/api/pos/update/${id}`
+        : `/api/v1/api/pos/create`;
+
+      const method = isEdit ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nama_pos: nama }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Gagal menyimpan data");
+      }
+
+      posModal.hide();
+      fetchPos(); // Refresh tabel
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = "Simpan";
+    }
+  };
+
+  // 5. Hapus POS
+  async function deletePos(id) {
+    if (
+      !confirm(
+        "Apakah Anda yakin ingin menghapus POS ini? Data kunjungan yang terkait mungkin akan terpengaruh.",
+      )
+    )
+      return;
+
+    try {
+      const res = await fetch(`/api/v1/api/pos/delete/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Gagal menghapus data");
+      }
+      fetchPos(); // Refresh tabel
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  }
+</script>
+{% endblock %}

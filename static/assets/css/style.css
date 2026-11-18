@@ -1,0 +1,130 @@
+/* RESET & INPUT GROUP */
+.combobox-input {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.combobox-toggle {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+.combobox-toggle:hover {
+  background-color: #f8f9fa !important;
+}
+
+.combobox-toggle:active {
+  background-color: #e9ecef !important;
+}
+
+/* FORM HEIGHT */
+#visitorForm .form-control,
+#visitorForm .form-select,
+#visitorForm .btn {
+  height: 40px !important;
+}
+
+#visitorForm .form-control:focus,
+#visitorForm .form-select:focus {
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  border-color: #86b7fe;
+}
+
+#nama_lain {
+  min-height: 80px !important;
+}
+
+#lainnyaFields input::placeholder {
+  color: #6c757d !important;
+}
+
+/* POPUP OVERLAY */
+#popupOverlay.show {
+  display: flex !important;
+}
+
+/* ANIMASI COMBOBOX */
+.combobox-dropdown {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+  opacity: 0;
+  padding: 0 !important;
+  margin-top: 0 !important;
+  pointer-events: none; /* ← INI PENTING! */
+  visibility: hidden;   /* ← INI PENTING! */
+  z-index: 1050;
+}
+
+.combobox-dropdown.show {
+  max-height: 12rem;
+  opacity: 1;
+  padding: 0.5rem 0 !important;
+  margin-top: 0.125rem !important;
+  pointer-events: auto; /* ← AKTIF SAAT BUKA */
+  visibility: visible;  /* ← TERLIHAT */
+}
+
+/* ROTASI PANAH */
+.combobox-toggle i {
+  transition: transform 0.3s ease;
+}
+.combobox-toggle.active i {
+  transform: rotate(180deg);
+}
+
+/* HOVER DROPDOWN ITEM */
+.combobox-dropdown li:hover {
+  background-color: #f8f9fa !important;
+}
+
+/* ANIMASI KLIK SELECT – MOBILE FRIENDLY */
+.select-pulse {
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: visible !important;
+  transform: none !important;
+}
+
+.select-pulse:focus,
+.select-pulse:active {
+  outline: none !important;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+  border-color: #0d6efd !important;
+  /* HILANGKAN SCALE → TIDAK GOYANG */
+}
+
+/* Ripple halus tanpa layout shift */
+.select-pulse::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(13, 110, 253, 0.15);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.select-pulse:active::after {
+  width: 120px;
+  height: 120px;
+}
+
+/* CEK LAYOUT SHIFT DI MOBILE */
+.form-select,
+.form-control {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* PASTIKAN CONTAINER TIDAK BERGERAK */
+.col-12,
+.row {
+  overflow: visible !important;
+}

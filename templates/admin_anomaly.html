@@ -1,0 +1,133 @@
+{% extends "admin_base.html" %} {% block content %}
+<div class="row">
+  <div class="col-md-4 mb-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title fw-semibold mb-3">
+          <i class="bi bi-cpu"></i> Jalankan Analisis
+        </h5>
+        <p class="text-muted small">
+          Pilih bulan data kunjungan yang ingin dianalisis menggunakan algoritma
+          Isolation Forest.
+        </p>
+
+        <div class="mb-3">
+          <label class="form-label">Pilih Bulan</label>
+          <input
+            type="month"
+            class="form-control"
+            id="analysisMonth"
+            value="2026-11"
+          />
+        </div>
+        <button
+          class="btn btn-primary w-100"
+          id="btnRunAnalysis"
+          onclick="runAnalysis()"
+        >
+          <span
+            id="spinner"
+            class="spinner-border spinner-border-sm d-none"
+            role="status"
+            aria-hidden="true"
+          ></span>
+          Jalankan Analisis
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-semibold">
+          <i class="bi bi-exclamation-triangle text-danger"></i> Hasil Deteksi
+          Anomali
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Kode QR</th>
+              <th>Nama</th>
+              <th>Skor Anomali</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="anomaly-table-body">
+            <tr>
+              <td colspan="4" class="text-center py-4 text-muted">
+                Belum ada data analisis.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function loadAnomalies() {
+    const month = document.getElementById("analysisMonth").value;
+    if (!month) return;
+
+    const tbody = document.getElementById("anomaly-table-body");
+    tbody.innerHTML =
+      '<tr><td colspan="4" class="text-center py-4 text-muted">Memuat data...</td></tr>';
+
+    try {
+      const res = await fetch(`/api/v1/admin/anomalies?month=${month}`);
+      const data = await res.json();
+
+      tbody.innerHTML = "";
+      if (data.length === 0) {
+        tbody.innerHTML =
+          '<tr><td colspan="4" class="text-center py-4 text-muted">Tidak ada data untuk bulan ini.</td></tr>';
+        return;
+      }
+
+      data.forEach((item) => {
+        const rowClass = item.is_anomaly ? "table-danger" : "";
+        const badgeClass = item.is_anomaly ? "bg-danger" : "bg-success";
+        const statusText = item.is_anomaly ? "ANOMALI" : "NORMAL";
+
+        tbody.innerHTML += `
+                    <tr class="${rowClass}">
+                        <td class="fw-bold font-monospace">${item.kode}</td>
+                        <td>${item.nama}</td>
+                        <td><span class="badge ${badgeClass}">${item.skor}</span></td>
+                        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                    </tr>
+                `;
+      });
+    } catch (error) {
+      console.error("Gagal memuat anomali:", error);
+      tbody.innerHTML =
+        '<tr><td colspan="4" class="text-center py-4 text-danger">Gagal memuat data.</td></tr>';
+    }
+  }
+
+  function runAnalysis() {
+    const btn = document.getElementById("btnRunAnalysis");
+    const spinner = document.getElementById("spinner");
+
+    // Simulasi loading (Nanti diganti dengan pemanggilan Celery API)
+    btn.disabled = true;
+    spinner.classList.remove("d-none");
+
+    setTimeout(() => {
+      btn.disabled = false;
+      spinner.classList.add("d-none");
+
+      // Setelah "selesai", muat data dari database
+      loadAnomalies();
+      alert("Data berhasil dimuat dari database!");
+    }, 1500);
+  }
+
+  // Muat data saat halaman pertama kali dibuka
+  document.addEventListener("DOMContentLoaded", loadAnomalies);
+</script>
+{% endblock %}
