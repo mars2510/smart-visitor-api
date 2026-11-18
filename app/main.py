@@ -1,4 +1,4 @@
-# app/main.py
+#main.py
 from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
